@@ -1,0 +1,388 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm]
+}
+
+enum UserRole {
+  STUDENT
+  EDITOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum QuestionCategory {
+  MCQ
+  SAQ
+  ESSAY
+}
+
+enum QuestionStatus {
+  DRAFT
+  REVIEWED
+  PUBLISHED
+}
+
+enum McqAnswerStatus {
+  ANSWERED
+  UNANSWERED
+}
+
+enum FeedbackType {
+  INCORRECT_OR_MISSING_ANSWER
+  WRONG_OR_UNCLEAR_EXPLANATION
+  TYPO_OR_FORMATTING
+  WRONG_CLASSIFICATION
+  FEATURE_SUGGESTION
+  BUG_REPORT
+  GENERAL_FEEDBACK
+  AI_INACCURACY_REPORT
+}
+
+enum FeedbackStatus {
+  NEW
+  IN_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum SubscriberStatus {
+  PENDING
+  ACTIVE
+  UNSUBSCRIBED
+}
+
+model User {
+  id                String    @id @default(cuid())
+  fullName          String
+  username          String    @unique
+  email             String    @unique
+  passwordHash      String
+  role              UserRole  @default(STUDENT)
+  emailVerified     Boolean   @default(false)
+  verifyToken       String?
+  resetToken        String?
+  resetTokenExpires DateTime?
+  totpSecret        String?
+  totpEnabled       Boolean   @default(false)
+  failedLogins      Int       @default(0)
+  lockedUntil       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  adminSessions   AdminSession[]
+  mcqAttempts     McqAttempt[]
+  questionViews   QuestionView[]
+  aiConversations AiConversation[]
+  feedbacks       Feedback[]       @relation("UserFeedback")
+  assignedTasks   Feedback[]       @relation("AdminAssignedFeedback")
+  activityLogs    ActivityLog[]
+
+  @@index([email])
+  @@index([username])
+}
+
+model AdminSession {
+  id           String   @id @default(cuid())
+  userId       String
+  tokenHash    String   @unique
+  isPreview    Boolean  @default(false)
+  lastActiveAt DateTime @default(now())
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  ipAddress    String?
+  userAgent    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model Discipline {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subdisciplines Subdiscipline[]
+  topics         Topic[]
+  questions      Question[]
+}
+
+model Subdiscipline {
+  id           String   @id @default(cuid())
+  disciplineId String
+  name         String
+  slug         String
+  description  String?
+  orderIndex   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  discipline Discipline @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
+  topics     Topic[]
+  questions  Question[]
+
+  @@unique([disciplineId, slug])
+  @@index([disciplineId])
+}
+
+model Topic {
+  id              String   @id @default(cuid())
+  disciplineId    String
+  subdisciplineId String?
+  name            String
+  slug            String
+  description     String?
+  orderIndex      Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  discipline    Discipline     @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
+  subdiscipline Subdiscipline? @relation(fields: [subdisciplineId], references: [id], onDelete: SetNull)
+  questions     Question[]
+
+  @@unique([disciplineId, subdisciplineId, slug])
+  @@index([disciplineId])
+  @@index([subdisciplineId])
+}
+
+model Question {
+  id              String           @id @default(cuid())
+  displayNumber   Int              @default(1)
+  category        QuestionCategory
+  status          QuestionStatus   @default(DRAFT)
+  disciplineId    String?
+  subdisciplineId String?
+  topicId         String?
+  examYear        Int?
+  stemHtml        String           @db.Text
+  stemPlain       String           @db.Text
+  totalMarks      Float?
+  // MCQ specific fields
+  mcqAnswerStatus McqAnswerStatus?
+  correctOptionId String?
+  explanationHtml String?          @db.Text
+  isUnclassified  Boolean          @default(false)
+  importBatchId   String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  publishedAt     DateTime?
+
+  discipline    Discipline?     @relation(fields: [disciplineId], references: [id], onDelete: SetNull)
+  subdiscipline Subdiscipline?  @relation(fields: [subdisciplineId], references: [id], onDelete: SetNull)
+  topic         Topic?          @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  importBatch   ImportBatch?    @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  sections      QuestionSection[]
+  options       McqOption[]
+  attempts      McqAttempt[]
+  views         QuestionView[]
+  aiChats       AiConversation[]
+  feedbacks     Feedback[]
+
+  @@index([status, disciplineId, subdisciplineId, topicId, category])
+  @@index([mcqAnswerStatus])
+  @@index([isUnclassified])
+  @@index([examYear])
+}
+
+model QuestionSection {
+  id          String  @id @default(cuid())
+  questionId  String
+  label       String  // e.g. "(a)", "(b)", "(i)"
+  contentHtml String  @db.Text
+  marks       Float?
+  orderIndex  Int     @default(0)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+model McqOption {
+  id          String  @id @default(cuid())
+  questionId  String
+  label       String  // e.g. "A", "B", "C", "D", "E"
+  contentHtml String  @db.Text
+  orderIndex  Int     @default(0)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+model McqAttempt {
+  id               String   @id @default(cuid())
+  userId           String
+  questionId       String
+  selectedOptionId String
+  isCorrect        Boolean? // null when MCQ is UNANSWERED
+  attemptedAt      DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, questionId])
+  @@index([questionId])
+}
+
+model QuestionView {
+  id           String   @id @default(cuid())
+  userId       String?
+  questionId   String
+  durationSecs Int      @default(0)
+  viewedAt     DateTime @default(now())
+
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, viewedAt])
+  @@index([questionId])
+}
+
+model AiConversation {
+  id         String   @id @default(cuid())
+  userId     String?
+  guestIp    String?
+  questionId String
+  messages   Json     // Array of { id, role, content, provider, model, createdAt, flagged }
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, questionId])
+}
+
+model AiUsageLog {
+  id               String   @id @default(cuid())
+  provider         String
+  model            String
+  feature          String   // student_assistant | importer_classifier | admin_draft
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  estimatedCostUsd Float    @default(0)
+  latencyMs        Int      @default(0)
+  success          Boolean  @default(true)
+  errorMessage     String?
+  createdAt        DateTime @default(now())
+
+  @@index([provider, createdAt])
+}
+
+model Feedback {
+  id              String         @id @default(cuid())
+  type            FeedbackType
+  status          FeedbackStatus @default(NEW)
+  message         String         @db.Text
+  rating          Int?
+  screenshotUrl   String?
+  aiMessageDump   String?        @db.Text
+  userId          String?
+  guestName       String?
+  guestEmail      String?
+  questionId      String?
+  assignedAdminId String?
+  internalNotes   String?        @db.Text
+  adminReply      String?        @db.Text
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  user          User?     @relation("UserFeedback", fields: [userId], references: [id], onDelete: SetNull)
+  assignedAdmin User?     @relation("AdminAssignedFeedback", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+  question      Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+
+  @@index([status, type])
+  @@index([questionId])
+}
+
+model Subscriber {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  name             String?
+  status           SubscriberStatus @default(PENDING)
+  confirmToken     String?          @unique
+  unsubscribeToken String           @unique @default(cuid())
+  source           String           @default("homepage")
+  confirmedAt      DateTime?
+  unsubscribedAt   DateTime?
+  createdAt        DateTime         @default(now())
+
+  @@index([status])
+}
+
+model SearchLog {
+  id           String   @id @default(cuid())
+  query        String
+  resultsCount Int
+  searchedAt   DateTime @default(now())
+
+  @@index([resultsCount, searchedAt])
+}
+
+model ImportBatch {
+  id            String   @id @default(cuid())
+  fileName      String
+  fileType      String   // csv | xlsx | xls | pdf | docx
+  totalRows     Int      @default(0)
+  importedCount Int      @default(0)
+  rejectedCount Int      @default(0)
+  duplicateCount Int     @default(0)
+  unclassifiedCount Int  @default(0)
+  mappingConfig Json?
+  errorReport   Json?
+  createdById   String
+  createdAt     DateTime @default(now())
+
+  questions Question[]
+}
+
+model MappingTemplate {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  mapping   Json
+  createdAt DateTime @default(now())
+}
+
+model PublishToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  action      String   // PUBLISH | UNPUBLISH | DELETE
+  questionIds Json
+  adminId     String
+  expiresAt   DateTime
+  used        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([actorId])
+}
