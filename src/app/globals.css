@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --navy-deep: #0B1F3A;
+  --navy-mid: #123A66;
+  --med-blue: #3B8FD9;
+  --med-blue-hover: #2F80C9;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 84px;
+}
+
+/* Admin Portal Distinct Visual Identity (Section 7A) */
+.admin-neon-frame {
+  min-height: 100vh;
+  background-color: #0A0D12;
+  color: #F3F4F6;
+  border: 3px solid transparent;
+  border-image: linear-gradient(135deg, #39FF14 0%, #0E8A3E 35%, #B3122B 70%, #FF1744 100%) 1;
+  box-shadow:
+    inset 0 0 18px rgba(57, 255, 20, 0.16),
+    inset 0 0 24px rgba(255, 23, 68, 0.14);
+}
+
+.admin-banner-split {
+  background: linear-gradient(125deg, #9B1126 0%, #7A0C1D 48%, #07562A 52%, #0E8A3E 100%);
+  color: #FFFFFF;
+}
+
+.admin-banner-danger {
+  background: linear-gradient(90deg, #7A0C1D 0%, #B3122B 100%);
+  color: #FFFFFF;
+}
+
+.admin-banner-success {
+  background: linear-gradient(90deg, #07562A 0%, #0E8A3E 100%);
+  color: #FFFFFF;
+}
+
+@keyframes wrongShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.animate-wrong-shake {
+  animation: wrongShake 0.25s ease-in-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-wrong-shake {
+    animation: none;
+  }
+}
