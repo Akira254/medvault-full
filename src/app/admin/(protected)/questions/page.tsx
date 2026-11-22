@@ -907,3 +907,11 @@ export default function AdminQuestionsPage() {
     </div>
   );
 }
+if (!createRes.ok) {
+  return {
+    ok: false,
+    error: `[${createRes.status} ${createRes.statusText}] ${
+      createData.error || 'Failed to save question'
+    }`,
+  };
+}
