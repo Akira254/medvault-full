@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -12,31 +13,45 @@ export interface AdminSessionUser {
   role: string;
 }
 
+function sha256(value: string): string {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
 /**
  * Verifies the admin session token stored in cookies against AdminSession.
- * Adjust the cookie name ('medvault_admin_session' / 'session') if your login sets a different cookie name.
+ * Checks common cookie names as well as any cookie containing "admin" or "session",
+ * and matches both raw and SHA-256 hashed tokens against AdminSession.tokenHash.
  */
 export async function requireAdminRole(
   allowedRoles: AdminRole[] = ['SUPER_ADMIN', 'ADMIN', 'EDITOR']
 ): Promise<{ user: AdminSessionUser | null; error: NextResponse | null }> {
   try {
     const cookieStore = cookies();
-    const token =
-      cookieStore.get('medvault_admin_session')?.value ||
-      cookieStore.get('medvault_session')?.value ||
-      cookieStore.get('session')?.value;
+    const candidates = cookieStore
+      .getAll()
+      .filter(
+        (c) =>
+          ['medvault_admin_session', 'admin_session', 'medvault_session', 'session'].includes(c.name) ||
+          c.name.toLowerCase().includes('admin') ||
+          c.name.toLowerCase().includes('session')
+      )
+      .map((c) => c.value)
+      .filter(Boolean);
 
-    if (!token) {
+    if (candidates.length === 0) {
       return {
         user: null,
         error: NextResponse.json({ error: 'Authentication required' }, { status: 401 }),
       };
     }
 
-    // Matches either raw token or hashed token if you hash before storing in AdminSession.tokenHash
+    const tokenCandidates = Array.from(
+      new Set([...candidates, ...candidates.map((raw) => sha256(raw))])
+    );
+
     const session = await prisma.adminSession.findFirst({
       where: {
-        tokenHash: token,
+        tokenHash: { in: tokenCandidates },
         expiresAt: { gt: new Date() },
       },
       include: {
@@ -74,10 +89,13 @@ export async function requireAdminRole(
       };
     }
 
-    await prisma.adminSession.update({
-      where: { id: session.id },
-      data: { lastActiveAt: new Date() },
-    });
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    if (session.lastActiveAt < fiveMinutesAgo) {
+      await prisma.adminSession.update({
+        where: { id: session.id },
+        data: { lastActiveAt: new Date() },
+      });
+    }
 
     return {
       user: {
