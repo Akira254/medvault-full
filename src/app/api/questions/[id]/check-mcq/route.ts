@@ -49,121 +49,151 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getValidAdminSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const session = await getValidAdminSession();
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Please log in to your admin session first.' },
+        { status: 401 }
+      );
+    }
 
-  const body = await req.json();
-  const category = (body?.category as QuestionCategory) || 'MCQ';
-  const stemHtml = sanitizeRichHtml(String(body?.stemHtml ?? ''));
-  const stemPlain = htmlToPlain(stemHtml);
+    const body = await req.json();
+    const category = (body?.category as QuestionCategory) || 'MCQ';
+    const stemHtml = sanitizeRichHtml(String(body?.stemHtml ?? ''));
+    const stemPlain = htmlToPlain(stemHtml);
 
-  if (!stemPlain) {
-    return NextResponse.json({ error: 'Question text is required' }, { status: 400 });
-  }
+    if (!stemPlain) {
+      return NextResponse.json({ error: 'Question text is required' }, { status: 400 });
+    }
 
-  const disciplineId = body?.disciplineId ? String(body.disciplineId) : null;
-  const subdisciplineId = body?.subdisciplineId ? String(body.subdisciplineId) : null;
-  const topicId = body?.topicId ? String(body.topicId) : null;
-  const examYear = body?.examYear ? Number(body.examYear) : null;
-  const totalMarks = body?.totalMarks ? Number(body.totalMarks) : null;
-  const isUnclassified = !disciplineId || !topicId;
+    const requestedStatus =
+      body?.status === QuestionStatus.PUBLISHED || body?.status === 'PUBLISHED'
+        ? QuestionStatus.PUBLISHED
+        : QuestionStatus.DRAFT;
 
-  const displayNumber = await getNextDisplayNumber(topicId, category);
+    const disciplineId = body?.disciplineId ? String(body.disciplineId) : null;
+    const subdisciplineId = body?.subdisciplineId ? String(body.subdisciplineId) : null;
+    const topicId = body?.topicId ? String(body.topicId) : null;
+    const examYear = body?.examYear ? Number(body.examYear) : null;
+    const totalMarks = body?.totalMarks ? Number(body.totalMarks) : null;
+    const isUnclassified = !disciplineId || !topicId;
 
-  // MCQ options & optional verified key
-  const rawOptions = Array.isArray(body?.options) ? body.options : [];
-  const correctOptionIndex =
-    typeof body?.correctOptionIndex === 'number' && body.correctOptionIndex >= 0
-      ? body.correctOptionIndex
-      : null;
+    if (requestedStatus === QuestionStatus.PUBLISHED && isUnclassified) {
+      return NextResponse.json(
+        { error: 'Assign both Discipline and Topic before publishing a question.' },
+        { status: 400 }
+      );
+    }
 
-  // SAQ / Essay sections (marks only, NO answers)
-  const rawSections = Array.isArray(body?.sections) ? body.sections : [];
+    const displayNumber = await getNextDisplayNumber(topicId, category);
 
-  const created = await prisma.$transaction(async (tx) => {
-    const q = await tx.question.create({
-      data: {
-        displayNumber,
-        category,
-        status: QuestionStatus.DRAFT,
-        disciplineId,
-        subdisciplineId,
-        topicId,
-        examYear: examYear && Number.isFinite(examYear) ? examYear : null,
-        stemHtml,
-        stemPlain,
-        totalMarks: category !== 'MCQ' && totalMarks && Number.isFinite(totalMarks) ? totalMarks : null,
-        mcqAnswerStatus:
-          category === 'MCQ'
-            ? correctOptionIndex !== null
-              ? McqAnswerStatus.ANSWERED
-              : McqAnswerStatus.UNANSWERED
-            : null,
-        explanationHtml:
-          category === 'MCQ' && body?.explanationHtml
-            ? sanitizeRichHtml(String(body.explanationHtml))
-            : null,
-        isUnclassified,
-      },
-    });
+    // MCQ options & optional verified key
+    const rawOptions = Array.isArray(body?.options) ? body.options : [];
+    const correctOptionIndex =
+      typeof body?.correctOptionIndex === 'number' && body.correctOptionIndex >= 0
+        ? body.correctOptionIndex
+        : null;
 
-    if (category === 'MCQ' && rawOptions.length > 0) {
-      let resolvedCorrectOptionId: string | null = null;
-      for (let i = 0; i < rawOptions.length; i++) {
-        const optHtml = sanitizeRichHtml(String(rawOptions[i]?.contentHtml ?? ''));
-        if (!htmlToPlain(optHtml)) continue;
-        const opt = await tx.mcqOption.create({
-          data: {
-            questionId: q.id,
-            label: String(rawOptions[i]?.label || String.fromCharCode(65 + i)),
-            contentHtml: optHtml,
-            orderIndex: i,
-          },
-        });
-        if (correctOptionIndex === i) {
-          resolvedCorrectOptionId = opt.id;
+    // SAQ / Essay sections (marks only, NO answers)
+    const rawSections = Array.isArray(body?.sections) ? body.sections : [];
+
+    const created = await prisma.$transaction(async (tx) => {
+      const q = await tx.question.create({
+        data: {
+          displayNumber,
+          category,
+          status: requestedStatus,
+          publishedAt: requestedStatus === QuestionStatus.PUBLISHED ? new Date() : null,
+          disciplineId,
+          subdisciplineId,
+          topicId,
+          examYear: examYear && Number.isFinite(examYear) ? examYear : null,
+          stemHtml,
+          stemPlain,
+          totalMarks:
+            category !== 'MCQ' && totalMarks && Number.isFinite(totalMarks) ? totalMarks : null,
+          mcqAnswerStatus:
+            category === 'MCQ'
+              ? correctOptionIndex !== null
+                ? McqAnswerStatus.ANSWERED
+                : McqAnswerStatus.UNANSWERED
+              : null,
+          explanationHtml:
+            category === 'MCQ' && body?.explanationHtml
+              ? sanitizeRichHtml(String(body.explanationHtml))
+              : null,
+          isUnclassified,
+        },
+      });
+
+      if (category === 'MCQ' && rawOptions.length > 0) {
+        let resolvedCorrectOptionId: string | null = null;
+        for (let i = 0; i < rawOptions.length; i++) {
+          const optHtml = sanitizeRichHtml(String(rawOptions[i]?.contentHtml ?? ''));
+          if (!htmlToPlain(optHtml)) continue;
+          const opt = await tx.mcqOption.create({
+            data: {
+              questionId: q.id,
+              label: String(rawOptions[i]?.label || String.fromCharCode(65 + i)),
+              contentHtml: optHtml,
+              orderIndex: i,
+            },
+          });
+          if (correctOptionIndex === i) {
+            resolvedCorrectOptionId = opt.id;
+          }
+        }
+
+        if (resolvedCorrectOptionId) {
+          await tx.question.update({
+            where: { id: q.id },
+            data: {
+              correctOptionId: resolvedCorrectOptionId,
+              mcqAnswerStatus: McqAnswerStatus.ANSWERED,
+            },
+          });
         }
       }
 
-      if (resolvedCorrectOptionId) {
-        await tx.question.update({
-          where: { id: q.id },
-          data: {
-            correctOptionId: resolvedCorrectOptionId,
-            mcqAnswerStatus: McqAnswerStatus.ANSWERED,
-          },
-        });
+      if ((category === 'SAQ' || category === 'ESSAY') && rawSections.length > 0) {
+        for (let i = 0; i < rawSections.length; i++) {
+          const secHtml = sanitizeRichHtml(String(rawSections[i]?.contentHtml ?? ''));
+          if (!htmlToPlain(secHtml)) continue;
+          await tx.questionSection.create({
+            data: {
+              questionId: q.id,
+              label: String(rawSections[i]?.label || `(${String.fromCharCode(97 + i)})`),
+              contentHtml: secHtml,
+              marks: rawSections[i]?.marks ? Number(rawSections[i].marks) : null,
+              orderIndex: i,
+            },
+          });
+        }
       }
-    }
 
-    if ((category === 'SAQ' || category === 'ESSAY') && rawSections.length > 0) {
-      for (let i = 0; i < rawSections.length; i++) {
-        const secHtml = sanitizeRichHtml(String(rawSections[i]?.contentHtml ?? ''));
-        if (!htmlToPlain(secHtml)) continue;
-        await tx.questionSection.create({
-          data: {
-            questionId: q.id,
-            label: String(rawSections[i]?.label || `(${String.fromCharCode(97 + i)})`),
-            contentHtml: secHtml,
-            marks: rawSections[i]?.marks ? Number(rawSections[i].marks) : null,
-            orderIndex: i,
-          },
-        });
-      }
-    }
+      return q;
+    });
 
-    return q;
-  });
+    await logAdminActivity({
+      actorId: session.user.id,
+      action:
+        requestedStatus === QuestionStatus.PUBLISHED
+          ? 'CREATE_AND_PUBLISH_QUESTION'
+          : 'CREATE_QUESTION',
+      entity: 'Question',
+      entityId: created.id,
+      metadata: { category, status: requestedStatus, isUnclassified },
+    });
 
-  await logAdminActivity({
-    actorId: session.user.id,
-    action: 'CREATE_QUESTION',
-    entity: 'Question',
-    entityId: created.id,
-    metadata: { category, isUnclassified },
-  });
-
-  return NextResponse.json({ question: created }, { status: 201 });
+    return NextResponse.json({ question: created }, { status: 201 });
+  } catch (error) {
+    console.error('POST /api/questions error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to create question' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function PATCH(req: NextRequest) {
@@ -180,7 +210,8 @@ export async function PATCH(req: NextRequest) {
     const subdisciplineId = body?.subdisciplineId ? String(body.subdisciplineId) : null;
     const topicId = body?.topicId ? String(body.topicId) : null;
     const category = body?.category as QuestionCategory | undefined;
-    const examYear = body?.examYear !== undefined && body?.examYear !== '' ? Number(body.examYear) : undefined;
+    const examYear =
+      body?.examYear !== undefined && body?.examYear !== '' ? Number(body.examYear) : undefined;
 
     if (questionIds.length === 0) {
       return NextResponse.json({ error: 'No questions selected' }, { status: 400 });
@@ -235,7 +266,10 @@ export async function PATCH(req: NextRequest) {
 
   // 2. Step 1 of Confirmed Bulk Publish / Unpublish / Delete
   if (action === 'REQUEST_PUBLISH_TOKEN') {
-    const publishAction = String(body?.publishAction ?? 'PUBLISH') as 'PUBLISH' | 'UNPUBLISH' | 'DELETE';
+    const publishAction = String(body?.publishAction ?? 'PUBLISH') as
+      | 'PUBLISH'
+      | 'UNPUBLISH'
+      | 'DELETE';
     const questionIds = Array.isArray(body?.questionIds) ? (body.questionIds as string[]) : [];
 
     if (questionIds.length === 0) {
@@ -270,7 +304,11 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ token: record.token, count: questionIds.length, action: publishAction });
+    return NextResponse.json({
+      token: record.token,
+      count: questionIds.length,
+      action: publishAction,
+    });
   }
 
   // 3. Step 2: Execute Confirmed PublishToken
