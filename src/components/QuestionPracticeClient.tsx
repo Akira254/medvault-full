@@ -185,18 +185,18 @@ export function QuestionPracticeClient({
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-      {/* Main Question Card */}
-      <div className="lg:col-span-7 xl:col-span-8 bg-white text-slate-900 rounded-2xl shadow-xl border border-slate-200 p-6 sm:p-8 space-y-6">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start w-full min-w-0">
+      {/* Main Question Card (White Background) */}
+      <div className="lg:col-span-7 xl:col-span-8 w-full min-w-0 bg-white text-slate-900 rounded-2xl shadow-xl border border-slate-200 p-4 sm:p-8 space-y-5 sm:space-y-6">
         {/* Metadata Header */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-200">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-navy-900 text-white">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 sm:pb-4 border-b border-slate-200 min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
+            <span className="px-2.5 sm:px-3 py-1 rounded-full text-xs font-bold bg-navy-900 text-white shrink-0">
               Q{question.displayNumber} • {question.category}
             </span>
             {question.category === 'MCQ' && (
               <span
-                className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                className={`px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold shrink-0 ${
                   question.mcqAnswerStatus === 'ANSWERED'
                     ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                     : 'bg-slate-100 text-slate-700 border border-slate-300'
@@ -206,14 +206,14 @@ export function QuestionPracticeClient({
               </span>
             )}
             {question.examYear && (
-              <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-navy-800">
+              <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-navy-800 shrink-0">
                 {question.examYear}
               </span>
             )}
           </div>
 
           {question.totalMarks != null && (
-            <span className="text-sm font-bold text-navy-800 bg-blue-50 px-3 py-1 rounded-lg">
+            <span className="text-xs sm:text-sm font-bold text-navy-800 bg-blue-50 px-2.5 sm:px-3 py-1 rounded-lg shrink-0">
               [{question.totalMarks} {question.totalMarks === 1 ? 'mark' : 'marks'}]
             </span>
           )}
@@ -221,22 +221,22 @@ export function QuestionPracticeClient({
 
         {/* Question Stem */}
         <div
-          className="prose prose-slate max-w-none text-base sm:text-lg leading-relaxed"
+          className="question-content prose prose-slate max-w-none text-sm sm:text-lg leading-relaxed min-w-0"
           dangerouslySetInnerHTML={{ __html: question.stemHtml }}
         />
 
         {/* Nested Sections for SAQ / Essay (Marks only, NO model answers) */}
         {question.sections.length > 0 && (
-          <div className="space-y-4 pt-2">
+          <div className="space-y-3 sm:space-y-4 pt-2 min-w-0">
             {question.sections.map((sec) => (
               <div
                 key={sec.id}
-                className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-start justify-between gap-4"
+                className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-start justify-between gap-3 sm:gap-4 min-w-0"
               >
-                <div className="flex items-start gap-2.5">
-                  <span className="font-bold text-navy-900">{sec.label}</span>
+                <div className="flex items-start gap-2 sm:gap-2.5 min-w-0 flex-1">
+                  <span className="font-bold text-navy-900 shrink-0">{sec.label}</span>
                   <div
-                    className="prose prose-slate max-w-none text-sm sm:text-base"
+                    className="question-content prose prose-slate max-w-none text-xs sm:text-base min-w-0 flex-1"
                     dangerouslySetInnerHTML={{ __html: sec.contentHtml }}
                   />
                 </div>
@@ -252,7 +252,7 @@ export function QuestionPracticeClient({
 
         {/* MCQ Options */}
         {question.category === 'MCQ' && (
-          <div className="space-y-3 pt-2">
+          <div className="space-y-2.5 sm:space-y-3 pt-2 min-w-0">
             {question.options.map((opt) => {
               const isCorrect = correctId === opt.id;
               const isWrong = wrongIds.includes(opt.id);
@@ -273,14 +273,14 @@ export function QuestionPracticeClient({
                   key={opt.id}
                   type="button"
                   onClick={() => handleSelectOption(opt.id)}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-start justify-between gap-3 ${btnStyle}`}
+                  className={`w-full min-w-0 text-left p-3 sm:p-4 rounded-xl border-2 transition-all flex items-start justify-between gap-2.5 sm:gap-3 ${btnStyle}`}
                 >
-                  <div className="flex items-start gap-3">
-                    <span className="w-7 h-7 rounded-full border border-current flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                  <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full border border-current flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                       {opt.label}
                     </span>
                     <div
-                      className="text-sm sm:text-base"
+                      className="question-content text-xs sm:text-base min-w-0 flex-1"
                       dangerouslySetInnerHTML={{ __html: opt.contentHtml }}
                     />
                   </div>
@@ -292,8 +292,8 @@ export function QuestionPracticeClient({
 
             {/* Unanswered MCQ Neutral Notice */}
             {question.mcqAnswerStatus === 'UNANSWERED' && selectedId && (
-              <div className="p-3.5 rounded-xl bg-slate-100 border border-slate-300 text-sm text-slate-700 flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-slate-600 shrink-0" />
+              <div className="p-3 sm:p-3.5 rounded-xl bg-slate-100 border border-slate-300 text-xs sm:text-sm text-slate-700 flex items-start sm:items-center gap-2">
+                <HelpCircle className="w-4 h-4 text-slate-600 shrink-0 mt-0.5 sm:mt-0" />
                 <span>
                   No official answer is available for this question. Use the AI revision assistant for a suggested breakdown.
                 </span>
@@ -302,12 +302,12 @@ export function QuestionPracticeClient({
 
             {/* Answered MCQ Controls */}
             {question.mcqAnswerStatus === 'ANSWERED' && (
-              <div className="flex flex-wrap items-center gap-3 pt-2">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-2">
                 {!correctId && wrongIds.length > 0 && (
                   <button
                     type="button"
                     onClick={handleRevealAnswer}
-                    className="px-4 py-2 rounded-lg text-xs font-semibold bg-navy-800 text-white hover:bg-navy-700"
+                    className="px-3.5 sm:px-4 py-2 rounded-lg text-xs font-semibold bg-navy-800 text-white hover:bg-navy-700"
                   >
                     Show Answer
                   </button>
@@ -316,7 +316,7 @@ export function QuestionPracticeClient({
                   <button
                     type="button"
                     onClick={handleResetMcq}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-100"
+                    className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-lg text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-100"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     Reset Question
@@ -330,24 +330,24 @@ export function QuestionPracticeClient({
               <div
                 role="region"
                 aria-label="Official Answer Explanation"
-                className="mt-4 p-5 rounded-2xl bg-emerald-50 border-2 border-emerald-500 text-emerald-950 space-y-2 shadow-md"
+                className="mt-4 p-4 sm:p-5 rounded-2xl bg-emerald-50 border-2 border-emerald-500 text-emerald-950 space-y-2 shadow-md min-w-0"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="inline-flex items-center gap-1.5 font-bold text-emerald-800 text-sm">
-                    <CheckCircle2 className="w-5 h-5" />
+                    <CheckCircle2 className="w-5 h-5 shrink-0" />
                     Correct
                   </span>
                   <button
                     type="button"
                     onClick={() => setShowExplanationDrawer(false)}
-                    className="text-xs text-emerald-800 underline"
+                    className="text-xs text-emerald-800 underline shrink-0"
                   >
                     Dismiss
                   </button>
                 </div>
                 {explanationHtml ? (
                   <div
-                    className="prose prose-sm prose-emerald max-w-none"
+                    className="question-content prose prose-sm prose-emerald max-w-none min-w-0"
                     dangerouslySetInnerHTML={{ __html: explanationHtml }}
                   />
                 ) : (
@@ -359,7 +359,7 @@ export function QuestionPracticeClient({
         )}
 
         {/* Guest prompt & Question Feedback Link */}
-        <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
+        <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2.5 text-xs text-slate-600 min-w-0">
           {!isLoggedIn && !isPreview ? (
             <span>
               <Link href="/login" className="text-medblue-600 font-semibold underline">
@@ -373,7 +373,7 @@ export function QuestionPracticeClient({
 
           <Link
             href={`/feedback?questionId=${question.id}`}
-            className="inline-flex items-center gap-1.5 font-semibold text-navy-800 hover:text-medblue-600"
+            className="inline-flex items-center gap-1.5 font-semibold text-navy-800 hover:text-medblue-600 shrink-0"
           >
             <Flag className="w-3.5 h-3.5" />
             Feedback / Report an issue
@@ -382,25 +382,25 @@ export function QuestionPracticeClient({
       </div>
 
       {/* SECTION 5: AI REVISION ASSISTANT PANEL (Desktop side panel / Mobile collapsible bottom sheet) */}
-      <aside className="lg:col-span-5 xl:col-span-4 bg-navy-950 border border-medblue-400/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+      <aside className="lg:col-span-5 xl:col-span-4 w-full min-w-0 bg-navy-950 border border-medblue-400/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
         <button
           type="button"
           onClick={() => setAiOpenMobile((o) => !o)}
-          className="w-full px-5 py-4 bg-navy-800/80 border-b border-medblue-400/20 flex items-center justify-between text-left"
+          className="w-full px-4 sm:px-5 py-3.5 sm:py-4 bg-navy-800/80 border-b border-medblue-400/20 flex items-center justify-between text-left gap-2"
         >
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-medblue-400" />
-            <div>
-              <h2 className="text-sm font-bold text-white">AI Revision Assistant</h2>
-              <p className="text-[11px] text-blue-200/80">Structured exam study guide</p>
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles className="w-5 h-5 text-medblue-400 shrink-0" />
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-white truncate">AI Revision Assistant</h2>
+              <p className="text-[11px] text-blue-200/80 truncate">Structured exam study guide</p>
             </div>
           </div>
-          <span className="lg:hidden text-blue-200">
+          <span className="lg:hidden text-blue-200 shrink-0">
             {aiOpenMobile ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
           </span>
         </button>
 
-        <div className={`${aiOpenMobile ? 'flex' : 'hidden'} lg:flex flex-col p-4 space-y-4`}>
+        <div className={`${aiOpenMobile ? 'flex' : 'hidden'} lg:flex flex-col p-3.5 sm:p-4 space-y-3.5 sm:space-y-4 min-w-0`}>
           {/* Mandatory Disclaimer */}
           <div className="p-3 rounded-xl bg-amber-950/50 border border-amber-500/40 text-[11px] text-amber-200 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
@@ -423,7 +423,7 @@ export function QuestionPracticeClient({
                 type="button"
                 disabled={aiLoading || isPreview}
                 onClick={() => sendAiPrompt(qa)}
-                className="text-xs px-3 py-1.5 rounded-full bg-navy-800 hover:bg-medblue-600 disabled:opacity-50 text-blue-100 border border-medblue-400/30 transition-colors"
+                className="text-xs px-2.5 sm:px-3 py-1.5 rounded-full bg-navy-800 hover:bg-medblue-600 disabled:opacity-50 text-blue-100 border border-medblue-400/30 transition-colors"
               >
                 {qa}
               </button>
@@ -440,15 +440,15 @@ export function QuestionPracticeClient({
               messages.map((m) => (
                 <div
                   key={m.id}
-                  className={`p-3.5 rounded-xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
+                  className={`p-3 sm:p-3.5 rounded-xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words ${
                     m.role === 'user'
-                      ? 'bg-medblue-600/30 border border-medblue-400/40 text-white ml-4'
+                      ? 'bg-medblue-600/30 border border-medblue-400/40 text-white ml-3 sm:ml-4'
                       : 'bg-navy-900 border border-white/10 text-blue-50'
                   }`}
                 >
                   {m.content}
                   {m.role === 'assistant' && (
-                    <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-blue-300/70">
+                    <div className="mt-3 pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-[11px] text-blue-300/70">
                       <span>AI-generated study help ({m.provider})</span>
                       <div className="flex items-center gap-2">
                         <button
@@ -492,7 +492,7 @@ export function QuestionPracticeClient({
               e.preventDefault();
               sendAiPrompt(promptInput);
             }}
-            className="flex items-center gap-2 pt-2 border-t border-white/10"
+            className="flex items-center gap-2 pt-2 border-t border-white/10 min-w-0"
           >
             <input
               type="text"
@@ -500,13 +500,13 @@ export function QuestionPracticeClient({
               value={promptInput}
               onChange={(e) => setPromptInput(e.target.value)}
               placeholder="Ask a follow-up..."
-              className="flex-1 px-3.5 py-2 rounded-xl bg-navy-900 border border-white/15 text-xs sm:text-sm text-white placeholder:text-blue-300/50 focus:outline-none focus:ring-1 focus:ring-medblue-400"
+              className="flex-1 min-w-0 px-3 sm:px-3.5 py-2 rounded-xl bg-navy-900 border border-white/15 text-xs sm:text-sm text-white placeholder:text-blue-300/50 focus:outline-none focus:ring-1 focus:ring-medblue-400"
             />
             <button
               type="submit"
               disabled={aiLoading || isPreview || !promptInput.trim()}
               aria-label="Send prompt"
-              className="p-2.5 rounded-xl bg-medblue-500 hover:bg-medblue-600 disabled:opacity-40 text-white"
+              className="p-2.5 rounded-xl bg-medblue-500 hover:bg-medblue-600 disabled:opacity-40 text-white shrink-0"
             >
               <Send className="w-4 h-4" />
             </button>

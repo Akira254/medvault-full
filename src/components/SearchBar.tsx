@@ -136,13 +136,13 @@ export function SearchBar({
   };
 
   return (
-    <div ref={containerRef} className={`relative w-full ${className}`}>
+    <div ref={containerRef} className={`relative w-full min-w-0 ${className}`}>
       <form
         onSubmit={handleSubmit}
         role="search"
-        className="flex items-center bg-white rounded-full shadow-lg border border-white/40 pl-4 pr-1.5 py-1.5 focus-within:ring-2 focus-within:ring-medblue-400"
+        className="flex items-center w-full min-w-0 bg-white rounded-2xl sm:rounded-full shadow-lg border border-white/40 pl-3 sm:pl-4 pr-1.5 py-1.5 gap-1.5 sm:gap-2 focus-within:ring-2 focus-within:ring-medblue-400"
       >
-        <Search className="w-5 h-5 text-slate-400 shrink-0 mr-2.5" aria-hidden="true" />
+        <Search className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0 ml-0.5 sm:ml-0" aria-hidden="true" />
         <input
           ref={inputRef}
           type="text"
@@ -150,22 +150,21 @@ export function SearchBar({
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => suggestions.length > 0 && setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Search for topics... (e.g. Pharmacology, Anatomy)"
+          placeholder="Search topics or keywords..."
           aria-label="Search medical revision topics and questions"
           role="combobox"
           aria-expanded={open}
           aria-autocomplete="list"
           aria-controls="medvault-search-listbox"
-          className="w-full bg-transparent text-slate-900 placeholder:text-slate-400 text-sm sm:text-base focus:outline-none"
+          className="flex-1 min-w-0 w-full bg-transparent text-slate-900 placeholder:text-slate-400 text-sm sm:text-base truncate focus:outline-none"
         />
 
-        {/* Clear (X) icon at far end of text field just before Search button */}
         {query.length > 0 && (
           <button
             type="button"
             onClick={handleClear}
             aria-label="Clear search"
-            className="min-w-[44px] min-h-[44px] -my-1.5 flex items-center justify-center text-slate-400 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-medblue-500 rounded-full"
+            className="w-9 h-9 sm:min-w-[44px] sm:min-h-[44px] sm:-my-1.5 flex items-center justify-center text-slate-400 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-medblue-500 rounded-full shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -173,7 +172,7 @@ export function SearchBar({
 
         <button
           type="submit"
-          className="bg-medblue-600 hover:bg-medblue-700 text-white font-semibold text-sm sm:text-base px-5 sm:px-6 py-2 rounded-full transition-colors shrink-0"
+          className="bg-medblue-600 hover:bg-medblue-700 text-white font-semibold text-xs sm:text-base px-3.5 sm:px-6 py-2 rounded-xl sm:rounded-full transition-colors shrink-0"
         >
           Search
         </button>
@@ -194,15 +193,15 @@ export function SearchBar({
                 setOpen(false);
                 router.push(item.href);
               }}
-              className={`flex items-center justify-between gap-3 px-4 py-3 cursor-pointer text-sm border-b border-slate-100 last:border-none ${
+              className={`flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 cursor-pointer text-xs sm:text-sm border-b border-slate-100 last:border-none ${
                 idx === activeIndex ? 'bg-blue-50' : 'hover:bg-slate-50'
               }`}
             >
-              <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                 {iconForType(item.type)}
                 <span className="text-slate-800 truncate">{highlightMatch(item.label)}</span>
               </div>
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">
+              <span className="text-[11px] sm:text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">
                 {item.type}
               </span>
             </li>
